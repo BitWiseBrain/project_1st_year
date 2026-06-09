@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIPED_BOT // CONTROL TERMINAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg: #050a0e;
+            --cyan: #00e5ff;
+            --amber: #ffa726;
+            --red: #ff1744;
+            --green: #69f0ae;
+            --border: rgba(0,229,255,0.15);
+            --glow: 0 0 15px rgba(0,229,255,0.3);
+            --glow-strong: 0 0 25px rgba(0,229,255,0.6);
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--cyan);
+            font-family: 'Share Tech Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+        /* Dynamic Animated Scanlines */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 229, 255, 0),
+                rgba(0, 229, 255, 0.03) 50%,
+                rgba(0, 229, 255, 0)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        @keyframes scrollScanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        .scanline-bar {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: rgba(0,229,255,0.3);
+            box-shadow: var(--glow);
+            animation: scrollScanline 8s linear infinite;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            text-shadow: 0 0 5px rgba(0,229,255,0.3);
+        }
+        .card-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid var(--border);
+            padding: 15px;
+            background: rgba(0, 229, 255, 0.02);
+            backdrop-filter: blur(4px);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::after {
+            content: "";
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(0,229,255,0.1) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .card:hover {
+            box-shadow: var(--glow);
+            transform: translateY(-4px);
+            border-color: rgba(0,229,255,0.4);
+            background: rgba(0, 229, 255, 0.05);
+        }
+        .card:hover::after {
+            opacity: 1;
+        }
+        .card-title {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .card-value {
+            font-size: 2.2em;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 8px rgba(0,229,255,0.4);
+        }
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 250px;
+        }
+        .chart-container {
+            border: 1px solid var(--border);
+            position: relative;
+            background: rgba(0, 229, 255, 0.01);
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+        .chart-container:hover {
+            box-shadow: var(--glow);
+            border-color: rgba(0,229,255,0.3);
+        }
+        .encoders-row {
+            border: 1px solid var(--border);
+            padding: 15px;
+            background: rgba(0, 229, 255, 0.01);
+        }
+        .encoder-bar-container {
+            border: 1px solid var(--border);
+            margin: 5px 0;
+            background: rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        .encoder-bar {
+            height: 20px;
+            background: linear-gradient(90deg, rgba(0,229,255,0.5), var(--cyan));
+            box-shadow: 0 0 10px var(--cyan);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        .log-nlp-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .log-box {
+            border: 1px solid var(--border);
+            height: 200px;
+            overflow-y: scroll;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            font-size: 0.85em;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .log-entry {
+            animation: slideIn 0.2s ease-out forwards;
+            padding: 2px 0;
+            border-bottom: 1px dashed rgba(0,229,255,0.1);
+        }
+        
+        .nlp-box {
+            border: 1px solid var(--border);
+            padding: 15px;
+            background: rgba(0, 229, 255, 0.02);
+            transition: all 0.3s;
+        }
+        .nlp-box:hover {
+            box-shadow: var(--glow);
+        }
+        .conf-bar-container {
+            width: 100%;
+            height: 15px;
+            border: 1px solid var(--border);
+            margin-top: 5px;
+            background: #000;
+        }
+        .conf-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.4s;
+            box-shadow: 0 0 8px currentColor;
+        }
+        .dpad-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .dpad {
+            display: grid;
+            grid-template-areas: 
+                ". up ."
+                "left stop right"
+                ". down .";
+            gap: 12px;
+        }
+        .btn {
+            background: rgba(0,0,0,0.5);
+            color: var(--cyan);
+            border: 1px solid rgba(0,229,255,0.4);
+            padding: 15px 20px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,229,255,0.2), transparent);
+            transition: all 0.4s;
+        }
+        .btn:hover {
+            box-shadow: var(--glow);
+            border-color: var(--cyan);
+            background: rgba(0, 229, 255, 0.1);
+        }
+        .btn:hover::before {
+            left: 100%;
+        }
+        .btn:active {
+            background: var(--cyan);
+            color: #000;
+            box-shadow: var(--glow-strong);
+            transform: scale(0.95);
+        }
+        .voice-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.5em;
+            margin-top: 20px;
+            border-width: 2px;
+        }
+        .voice-active {
+            animation: pulse-voice 1.5s infinite;
+        }
+        @keyframes pulse-voice {
+            0% { box-shadow: 0 0 5px var(--cyan), inset 0 0 5px var(--cyan); border-color: rgba(0,229,255,0.5); }
+            50% { box-shadow: 0 0 25px var(--cyan), inset 0 0 15px var(--cyan); border-color: var(--cyan); }
+            100% { box-shadow: 0 0 5px var(--cyan), inset 0 0 5px var(--cyan); border-color: rgba(0,229,255,0.5); }
+        }
+        
+        input[type="range"] {
+            width: 200px;
+            accent-color: var(--cyan);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanline-bar"></div>
+    <div class="container">
+        <div class="header">
+            <div>BIPED_BOT // CONTROL TERMINAL v1.0</div>
+            <div>
+                <span id="conn-status" style="color: var(--red);">[●] DISCONNECTED</span> | 
+                UPTIME: <span id="uptime">00:00:00</span> | 
+                RECONNECTS: <span id="reconnects">0</span>
+            </div>
+        </div>
+
+        <div class="card-row">
+            <div class="card">
+                <div class="card-title">PITCH °</div>
+                <div class="card-value" id="val-pitch">0.00</div>
+            </div>
+            <div class="card">
+                <div class="card-title">VELOCITY m/s</div>
+                <div class="card-value" id="val-vel">0.00</div>
+            </div>
+            <div class="card">
+                <div class="card-title">HEIGHT mm</div>
+                <div class="card-value" id="val-height">150</div>
+            </div>
+            <div class="card">
+                <div class="card-title">LAST CMD</div>
+                <div class="card-value" style="color: var(--amber); font-size: 1.2em;" id="val-cmd">NONE</div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="chart-container">
+                <canvas id="pitchChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="velChart"></canvas>
+            </div>
+        </div>
+
+        <div class="encoders-row">
+            <div>L ENC: <span id="l-enc-val">000000</span></div>
+            <div style="border: 1px solid var(--border); margin: 5px 0;"><div class="encoder-bar" id="l-enc-bar"></div></div>
+            <div style="margin-top: 10px;">R ENC: <span id="r-enc-val">000000</span></div>
+            <div style="border: 1px solid var(--border); margin: 5px 0;"><div class="encoder-bar" id="r-enc-bar"></div></div>
+        </div>
+
+        <div class="log-nlp-row">
+            <div class="log-box" id="cmd-log">
+                <!-- Logs here -->
+            </div>
+            <div class="nlp-box">
+                <div class="card-title">NLP CONFIDENCE METER</div>
+                <div>Intent: <span id="nlp-intent">NONE</span></div>
+                <div>Confidence: <span id="nlp-conf">0.0%</span></div>
+                <div class="conf-bar-container">
+                    <div class="conf-bar" id="nlp-conf-bar" style="background: var(--red);"></div>
+                </div>
+                <br>
+                <div style="opacity: 0.7;">
+                    Raw text: "<span id="nlp-text"></span>"<br>
+                    Extracted vel: <span id="nlp-vel">1.0</span> m/s<br>
+                    Extracted height: <span id="nlp-h">150</span> mm
+                </div>
+            </div>
+        </div>
+
+        <div class="dpad-container">
+            <div class="dpad">
+                <button class="btn" style="grid-area: up;" onclick="sendCommand('FORWARD', document.getElementById('s-vel').value, null)">▲ FWD</button>
+                <button class="btn" style="grid-area: left;" onclick="sendCommand('TURN_LEFT', document.getElementById('s-vel').value, null)">◄ LEFT</button>
+                <button class="btn" style="grid-area: stop;" onclick="sendCommand('STOP', 0, null)">■ STOP</button>
+                <button class="btn" style="grid-area: right;" onclick="sendCommand('TURN_RIGHT', document.getElementById('s-vel').value, null)">RIGHT ►</button>
+                <button class="btn" style="grid-area: down;" onclick="sendCommand('BACKWARD', document.getElementById('s-vel').value, null)">▼ BACK</button>
+            </div>
+            <div>
+                SPEED: <input type="range" id="s-vel" min="0.1" max="3.0" step="0.1" value="1.0" onchange="updateSliders()"> <span id="s-vel-val">1.0 m/s</span>
+            </div>
+            <div>
+                HEIGHT: <input type="range" id="s-height" min="80" max="190" step="5" value="150" onchange="sendCommand('SET_HEIGHT', null, this.value); updateSliders()"> <span id="s-height-val">150 mm</span>
+            </div>
+        </div>
+
+        <button class="btn voice-btn" id="voice-btn" onclick="toggleVoice()">🎤 VOICE: OFF</button>
+        <div style="text-align: center; opacity: 0.7; margin-top: 5px;" id="vad-indicator">● IDLE</div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#00e5ff';
+        Chart.defaults.font.family = "'Share Tech Mono', monospace";
+        
+        const pitchCtx = document.getElementById('pitchChart').getContext('2d');
+        const velCtx = document.getElementById('velChart').getContext('2d');
+
+        const pitchChart = new Chart(pitchCtx, {
+            type: 'line',
+            data: {
+                labels: Array(60).fill(''),
+                datasets: [{
+                    label: 'PITCH HISTORY',
+                    data: Array(60).fill(0),
+                    borderColor: '#ff1744',
+                    backgroundColor: 'rgba(255,23,68,0.1)',
+                    fill: true,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    y: { min: -20, max: 20 },
+                    x: { display: false }
+                }
+            }
+        });
+
+        const velChart = new Chart(velCtx, {
+            type: 'line',
+            data: {
+                labels: Array(60).fill(''),
+                datasets: [{
+                    label: 'VELOCITY HISTORY',
+                    data: Array(60).fill(0),
+                    borderColor: '#00e5ff',
+                    backgroundColor: 'rgba(0,229,255,0.1)',
+                    fill: true,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    y: { min: -3.0, max: 3.0 },
+                    x: { display: false }
+                }
+            }
+        });
+
+        let ws;
+        let reconnects = 0;
+        let lastCmdStr = "";
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                document.getElementById('conn-status').innerHTML = '[●] CONNECTED';
+                document.getElementById('conn-status').style.color = 'var(--green)';
+            };
+
+            ws.onmessage = (event) => {
+                const d = JSON.parse(event.data);
+                
+                // Format uptime
+                const h = Math.floor(d.uptime / 3600).toString().padStart(2, '0');
+                const m = Math.floor((d.uptime % 3600) / 60).toString().padStart(2, '0');
+                const s = Math.floor(d.uptime % 60).toString().padStart(2, '0');
+                document.getElementById('uptime').innerText = `${h}:${m}:${s}`;
+
+                // Update cards
+                const p = d.pitch;
+                const pEl = document.getElementById('val-pitch');
+                pEl.innerText = p.toFixed(2);
+                pEl.style.color = Math.abs(p) > 8 ? 'var(--red)' : 'var(--cyan)';
+                
+                document.getElementById('val-vel').innerText = d.velocity.toFixed(2);
+                document.getElementById('val-height').innerText = d.height.toFixed(0);
+                document.getElementById('val-cmd').innerText = d.last_cmd;
+
+                // Charts
+                pitchChart.data.datasets[0].data.push(p);
+                if (pitchChart.data.datasets[0].data.length > 60) pitchChart.data.datasets[0].data.shift();
+                pitchChart.update('none');
+
+                velChart.data.datasets[0].data.push(d.velocity);
+                if (velChart.data.datasets[0].data.length > 60) velChart.data.datasets[0].data.shift();
+                velChart.update('none');
+
+                // Encoders
+                const lEnc = d.enc_left;
+                const rEnc = d.enc_right;
+                document.getElementById('l-enc-val').innerText = lEnc.toString().padStart(6, '0');
+                document.getElementById('r-enc-val').innerText = rEnc.toString().padStart(6, '0');
+                
+                document.getElementById('l-enc-bar').style.width = `${(Math.abs(lEnc) % 1000) / 10}%`;
+                document.getElementById('r-enc-bar').style.width = `${(Math.abs(rEnc) % 1000) / 10}%`;
+
+                // Log
+                if (d.last_cmd !== lastCmdStr) {
+                    lastCmdStr = d.last_cmd;
+                    const logEl = document.getElementById('cmd-log');
+                    const timeStr = new Date().toISOString().substring(11, 23);
+                    const color = d.last_confidence < 0.7 && !d.last_cmd.startsWith("MANUAL") ? 'var(--amber)' : 'var(--cyan)';
+                    
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    entry.style.color = color;
+                    entry.innerText = `[${timeStr}] ${d.last_intent} (${(d.last_confidence*100).toFixed(1)}%) → ${d.last_raw_text || 'UI'}`;
+                    logEl.insertBefore(entry, logEl.firstChild);
+                    
+                    if (logEl.children.length > 50) {
+                        logEl.removeChild(logEl.lastChild);
+                    }
+                }
+
+                // NLP
+                document.getElementById('nlp-intent').innerText = d.last_intent;
+                const confPct = (d.last_confidence * 100).toFixed(1);
+                document.getElementById('nlp-conf').innerText = `${confPct}%`;
+                
+                const bar = document.getElementById('nlp-conf-bar');
+                bar.style.width = `${confPct}%`;
+                if (confPct < 50) bar.style.background = 'var(--red)';
+                else if (confPct < 75) bar.style.background = 'var(--amber)';
+                else if (confPct < 95) bar.style.background = 'var(--cyan)';
+                else bar.style.background = 'var(--green)';
+
+                document.getElementById('nlp-text').innerText = d.last_raw_text;
+                document.getElementById('nlp-vel').innerText = d.last_vel_extracted.toFixed(1);
+                document.getElementById('nlp-h').innerText = d.last_height_extracted.toFixed(0);
+
+                // Voice btn
+                const btn = document.getElementById('voice-btn');
+                if (d.voice_active) {
+                    btn.innerText = '🎤 VOICE: ACTIVE';
+                    btn.classList.add('voice-active');
+                    btn.style.color = 'black';
+                    btn.style.background = 'var(--cyan)';
+                } else {
+                    btn.innerText = '🎤 VOICE: OFF';
+                    btn.classList.remove('voice-active');
+                    btn.style.color = 'var(--cyan)';
+                    btn.style.background = 'black';
+                }
+            };
+
+            ws.onclose = () => {
+                document.getElementById('conn-status').innerHTML = '[●] DISCONNECTED';
+                document.getElementById('conn-status').style.color = 'var(--red)';
+                reconnects++;
+                document.getElementById('reconnects').innerText = reconnects;
+                setTimeout(connect, 2000);
+            };
+        }
+
+        function sendCommand(cmd, val, height) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const payload = {cmd};
+                if (val !== null) payload.val = parseFloat(val);
+                if (height !== null) payload.height = parseFloat(height);
+                ws.send(JSON.stringify(payload));
+            }
+        }
+
+        function toggleVoice() {
+            sendCommand('VOICE_TOGGLE', null, null);
+        }
+
+        function updateSliders() {
+            document.getElementById('s-vel-val').innerText = document.getElementById('s-vel').value + ' m/s';
+            document.getElementById('s-height-val').innerText = document.getElementById('s-height').value + ' mm';
+        }
+
+        connect();
+    </script>
+</body>
+</html>
