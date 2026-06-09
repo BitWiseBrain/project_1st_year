@@ -16,17 +16,13 @@ class WebSocketServer:
                 with self.state.lock:
                     data = {
                         "pitch": self.state.pitch,
-                        "velocity": self.state.velocity,
-                        "height": self.state.height,
-                        "enc_left": self.state.enc_left,
-                        "enc_right": self.state.enc_right,
+                        "pwm": self.state.pwm,
                         "uptime": self.state.uptime,
                         "last_cmd": self.state.last_cmd,
                         "last_intent": self.state.last_intent,
                         "last_confidence": self.state.last_confidence,
                         "last_raw_text": self.state.last_raw_text,
                         "last_vel_extracted": self.state.last_vel_extracted,
-                        "last_height_extracted": self.state.last_height_extracted,
                         "ble_connected": self.state.ble_connected,
                         "voice_active": self.state.voice_active
                     }
@@ -36,6 +32,11 @@ class WebSocketServer:
             pass
 
     async def recv_loop(self, websocket):
+        """Handle incoming commands from the dashboard.
+        
+        Commands from dashboard buttons are plain text matching the firmware:
+          DRIVE_FORWARD, DRIVE_BACKWARD, TURN_LEFT, TURN_RIGHT, STOP, SPEED:x.xx
+        """
         try:
             async for message in websocket:
                 data = json.loads(message)
@@ -44,18 +45,50 @@ class WebSocketServer:
                     if cmd == "VOICE_TOGGLE":
                         with self.state.lock:
                             self.state.voice_active = not self.state.voice_active
+                            active = self.state.voice_active
+                        print(f"[WS] Voice {'ACTIVATED' if active else 'DEACTIVATED'}")
+                    elif cmd == "NLP_TEXT":
+                        # Process typed text through NLP
+                        text = data.get("text", "")
+                        if text:
+                            from nlp.pipeline import NLPPipeline
+                            pipeline = NLPPipeline()
+                            result = pipeline.infer(text)
+                            with self.state.lock:
+                                self.state.last_raw_text = result["raw_text"]
+                                self.state.last_intent = result["intent"]
+                                self.state.last_confidence = result["confidence"]
+                                self.state.last_vel_extracted = result["velocity"]
+                                self.state.last_cmd = f"TEXT → {result['intent']}"
+                            
+                            # Send to robot if connected
+                            ble_payload = result["ble_payload"]
+                            try:
+                                await self.ble_client.send_command(ble_payload)
+                            except Exception as exc:
+                                print(f"[WS] BLE send failed (robot may not be connected): {exc}")
+                            print(f"[WS] NLP: \"{text}\" → {result['intent']} (conf: {result['confidence']*100:.0f}%)")
+                    elif cmd == "SPEED":
+                        val = data.get("val", 0.5)
+                        ble_payload = f"SPEED:{float(val):.2f}"
+                        with self.state.lock:
+                            self.state.last_cmd = f"MANUAL → SPEED:{val}"
+                            self.state.last_intent = "SPEED"
+                            self.state.last_vel_extracted = float(val)
+                        try:
+                            await self.ble_client.send_command(ble_payload)
+                        except Exception as exc:
+                            print(f"[WS] BLE send failed: {exc}")
                     else:
+                        # Direct movement commands: DRIVE_FORWARD, TURN_LEFT, etc.
                         with self.state.lock:
                             self.state.last_cmd = f"MANUAL → {cmd}"
                             self.state.last_intent = cmd
-                            if "val" in data:
-                                self.state.last_vel_extracted = float(data["val"])
-                            if "height" in data:
-                                self.state.last_height_extracted = float(data["height"])
                         try:
-                            await self.ble_client.send_command(message)
+                            await self.ble_client.send_command(cmd)
                         except Exception as exc:
                             print(f"[WS] BLE send failed: {exc}")
+                        print(f"[WS] Manual command: {cmd}")
         except websockets.exceptions.ConnectionClosed:
             pass
         except json.JSONDecodeError:
@@ -74,7 +107,7 @@ class WebSocketServer:
         for task in pending:
             task.cancel()
             
-        self.clients.remove(websocket)
+        self.clients.discard(websocket)
 
     async def serve(self):
         async with websockets.serve(self.handler, self.host, self.port):

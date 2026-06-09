@@ -1,68 +1,78 @@
 import re
 
 class NLPPipeline:
+    """NLP pipeline for VoxBot self-balancing robot.
+    
+    Matches voice commands to robot actions based on the firmware's
+    parseCommand() function in Voxbot.ino:
+      - DRIVE_FORWARD   (linearVelocity = +0.5)
+      - DRIVE_BACKWARD  (linearVelocity = -0.5)
+      - TURN_LEFT       (angularVelocity = -0.5)
+      - TURN_RIGHT      (angularVelocity = +0.5)
+      - STOP            (all zeros)
+      - SPEED:x.xx      (custom forward speed 0.0-1.0)
+    """
     def __init__(self):
+        # Ordered by priority — STOP first so "stop" overrides everything
         self._patterns = [
-            (re.compile(r"\b(stop|halt|pause|stand still|freeze)\b", re.I), "STOP"),
-            (re.compile(r"\b(left|turn left|rotate left|spin left)\b", re.I), "TURN_LEFT"),
-            (re.compile(r"\b(right|turn right|rotate right|spin right)\b", re.I), "TURN_RIGHT"),
-            (re.compile(r"\b(back|backward|reverse|reverse\b)\b", re.I), "DRIVE_BACKWARD"),
-            (re.compile(r"\b(forward|ahead|go straight|move forward)\b", re.I), "DRIVE_FORWARD"),
-            (re.compile(r"\b(speed|fast|slow|velocity)\b", re.I), None),
+            (re.compile(r"\b(stop|halt|pause|stand\s*still|freeze|brake)\b", re.I), "STOP"),
+            (re.compile(r"\b(turn\s*left|rotate\s*left|spin\s*left|go\s*left|left)\b", re.I), "TURN_LEFT"),
+            (re.compile(r"\b(turn\s*right|rotate\s*right|spin\s*right|go\s*right|right)\b", re.I), "TURN_RIGHT"),
+            (re.compile(r"\b(back|backward|backwards|reverse|go\s*back|move\s*back)\b", re.I), "DRIVE_BACKWARD"),
+            (re.compile(r"\b(forward|ahead|go\s*straight|move\s*forward|go\s*forward|advance)\b", re.I), "DRIVE_FORWARD"),
         ]
 
     def startup(self):
+        print("[NLP] Pipeline ready — pattern-matching for robot commands")
         return None
 
     def infer(self, text: str):
+        """Parse voice text into a robot command.
+        
+        Returns dict with:
+          raw_text, intent, confidence, velocity, ble_payload (string)
+        """
         raw_text = text.strip() if isinstance(text, str) else ""
         lowered = raw_text.lower()
         command = None
         velocity = 0.5
-        height = 150.0
-        confidence = 0.65
+        confidence = 0.0
 
+        # Match against known patterns
         for pattern, intent in self._patterns:
-            if pattern.search(raw_text):
-                if intent is not None:
-                    command = intent
-                    confidence = 0.92
-                    break
+            if pattern.search(lowered):
+                command = intent
+                confidence = 0.92
+                break
 
+        # Fallback: if no pattern matched
         if command is None:
-            command = "DRIVE_FORWARD" if lowered else "STOP"
-            confidence = 0.55 if lowered else 0.0
+            command = "STOP"
+            confidence = 0.35
 
-        speed_match = re.search(r"\b([0-9]+(?:\.[0-9]+)?)\s*(m/s|meters per second|mps|meters)\b", lowered)
+        # Extract speed value if mentioned (e.g. "go forward at 0.8")
+        speed_match = re.search(
+            r"\b([0-9]+(?:\.[0-9]+)?)\s*(?:m/?s|meters?\s*per\s*second|speed|percent)?\b",
+            lowered
+        )
         if speed_match:
             try:
-                velocity = max(0.1, min(1.0, float(speed_match.group(1))))
+                val = float(speed_match.group(1))
+                if 0.0 <= val <= 1.0:
+                    velocity = val
             except ValueError:
-                velocity = 0.5
+                pass
 
-        height_match = re.search(r"\b([0-9]{2,3})\s*(mm|millimeters|millimetres)\b", lowered)
-        if height_match:
-            try:
-                height = float(height_match.group(1))
-            except ValueError:
-                height = 150.0
-
-        if command == "DRIVE_FORWARD" and velocity == 0.5:
-            velocity = 0.5
-        if command == "DRIVE_BACKWARD" and velocity == 0.5:
-            velocity = 0.5
-
-        ble_payload = {
-            "cmd": command,
-            "val": velocity,
-            "height": height,
-        }
+        # Build the BLE payload string matching firmware expectations
+        if command.startswith("SPEED"):
+            ble_payload = f"SPEED:{velocity:.2f}"
+        else:
+            ble_payload = command
 
         return {
             "raw_text": raw_text,
             "intent": command,
             "confidence": confidence,
             "velocity": velocity,
-            "height": height,
             "ble_payload": ble_payload,
         }

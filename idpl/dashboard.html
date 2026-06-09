@@ -3,210 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoxBot // BLE Control Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <title>VoxBot — Self-Balancing Robotics Panel</title>
+    <!-- Google Fonts: Syne (Headings) & DM Sans (Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <style>
         :root {
-            --bg: #050a0e;
-            --cyan: #00e5ff;
-            --amber: #ffa726;
-            --red: #ff1744;
-            --green: #69f0ae;
-            --border: rgba(0,229,255,0.15);
-            --glow: 0 0 15px rgba(0,229,255,0.3);
-            --glow-strong: 0 0 25px rgba(0,229,255,0.6);
+            --bg: #f7f5f0; /* Soft warm editorial cream/sand */
+            --card: rgba(255, 255, 255, 0.75); /* Soft white glass */
+            --border: rgba(30, 30, 25, 0.08); /* Sophisticated hairline divider */
+            --text-main: #1c1c18; /* Rich deep charcoal/olive black */
+            --text-muted: #6e6d62; /* Soft warm slate */
+            
+            --accent: #2c25df; /* Bold, electric royal indigo */
+            --accent-bg: #ecebfb; 
+            
+            --active-green: #0b8555;
+            --active-green-bg: #e5f6ed;
+            
+            --active-orange: #d95d18;
+            --active-orange-bg: #fbf0e8;
+
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            
+            --font-head: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
         }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-color: var(--bg);
-            color: var(--cyan);
-            font-family: 'Share Tech Mono', monospace;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            position: relative;
-        }
-        /* Dynamic Animated Scanlines */
-        body::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(
-                to bottom,
-                rgba(0, 229, 255, 0),
-                rgba(0, 229, 255, 0.03) 50%,
-                rgba(0, 229, 255, 0)
-            );
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 999;
-        }
-        
-        @keyframes scrollScanline {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100vh); }
-        }
-        
-        .scanline-bar {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 2px;
-            background: rgba(0,229,255,0.3);
-            box-shadow: var(--glow);
-            animation: scrollScanline 8s linear infinite;
-            pointer-events: none;
-            z-index: 1000;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(235, 225, 205, 0.6) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(200, 210, 245, 0.4) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            padding: 40px 24px;
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
         }
 
         .container {
+            max-width: 1040px;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 10;
+            gap: 28px;
         }
+
+        /* Entrance Animation */
+        @keyframes reveal {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animated-reveal {
+            animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        
+        .header h1 {
+            font-family: var(--font-head);
+            font-weight: 800;
+            font-size: 2.4em;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+
+        .header p {
+            font-size: 0.95em;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.88em;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .status-pill {
+            display: flex;
             align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-indicator.red { background-color: #ef4444; }
+        .status-indicator.green { background-color: var(--active-green); }
+        .status-indicator.amber { background-color: var(--active-orange); }
+
+        /* Connection Banner */
+        .conn-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 24px;
+            border-radius: var(--radius-lg);
+            font-size: 0.92em;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .conn-banner.disconnected {
+            background: rgba(217, 93, 24, 0.06);
+            color: var(--active-orange);
+            border-color: rgba(217, 93, 24, 0.15);
+        }
+
+        .conn-banner.connected {
+            background: rgba(11, 133, 85, 0.06);
+            color: var(--active-green);
+            border-color: rgba(11, 133, 85, 0.15);
+        }
+
+        .conn-banner svg {
+            width: 20px;
+            height: 20px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Layout Grid */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        /* Clean Panel styling */
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 4px 30px rgba(30, 30, 25, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .panel:hover {
+            box-shadow: 0 8px 40px rgba(30, 30, 25, 0.04);
+        }
+
+        .panel-label {
+            font-family: var(--font-head);
+            font-size: 0.85em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
             border-bottom: 1px solid var(--border);
             padding-bottom: 10px;
-            text-shadow: 0 0 5px rgba(0,229,255,0.3);
         }
-        .card-row {
+
+        /* Telemetry Cards Row */
+        .telemetry-row {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
         }
-        .card {
-            border: 1px solid var(--border);
-            padding: 15px;
-            background: rgba(0, 229, 255, 0.02);
-            backdrop-filter: blur(4px);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            overflow: hidden;
+
+        .telemetry-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
-        .card::after {
-            content: "";
-            position: absolute;
-            top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(0,229,255,0.1) 0%, transparent 60%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-        .card:hover {
-            box-shadow: var(--glow);
-            transform: translateY(-4px);
-            border-color: rgba(0,229,255,0.4);
-            background: rgba(0, 229, 255, 0.05);
-        }
-        .card:hover::after {
-            opacity: 1;
-        }
-        .card-title {
-            font-size: 0.9em;
-            opacity: 0.8;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-        }
-        .card-value {
+
+        .telemetry-num {
+            font-family: var(--font-head);
             font-size: 2.2em;
-            font-variant-numeric: tabular-nums;
-            text-shadow: 0 0 8px rgba(0,229,255,0.4);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            line-height: 1;
         }
-        .charts-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: 250px;
+
+        .telemetry-label {
+            font-size: 0.78em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .chart-container {
-            border: 1px solid var(--border);
-            position: relative;
-            background: rgba(0, 229, 255, 0.01);
-            transition: box-shadow 0.3s, border-color 0.3s;
-        }
-        .chart-container:hover {
-            box-shadow: var(--glow);
-            border-color: rgba(0,229,255,0.3);
-        }
-        .encoders-row {
-            border: 1px solid var(--border);
-            padding: 15px;
-            background: rgba(0, 229, 255, 0.01);
-        }
-        .encoder-bar-container {
-            border: 1px solid var(--border);
-            margin: 5px 0;
-            background: rgba(0,0,0,0.5);
-            position: relative;
-            overflow: hidden;
-        }
-        .encoder-bar {
-            height: 20px;
-            background: linear-gradient(90deg, rgba(0,229,255,0.5), var(--cyan));
-            box-shadow: 0 0 10px var(--cyan);
-            width: 0%;
-            transition: width 0.1s linear;
-        }
-        .log-nlp-row {
+
+        /* Charts styling */
+        .charts-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
-        .log-box {
-            border: 1px solid var(--border);
-            height: 200px;
-            overflow-y: scroll;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px;
-            font-size: 0.85em;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+
+        .chart-box {
+            height: 180px;
+            position: relative;
         }
-        
-        @keyframes slideIn {
-            from { transform: translateX(-10px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .log-entry {
-            animation: slideIn 0.2s ease-out forwards;
-            padding: 2px 0;
-            border-bottom: 1px dashed rgba(0,229,255,0.1);
-        }
-        
-        .nlp-box {
-            border: 1px solid var(--border);
-            padding: 15px;
-            background: rgba(0, 229, 255, 0.02);
-            transition: all 0.3s;
-        }
-        .nlp-box:hover {
-            box-shadow: var(--glow);
-        }
-        .conf-bar-container {
-            width: 100%;
-            height: 15px;
-            border: 1px solid var(--border);
-            margin-top: 5px;
-            background: #000;
-        }
-        .conf-bar {
-            height: 100%;
-            width: 0%;
-            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.4s;
-            box-shadow: 0 0 8px currentColor;
-        }
+
+        /* Controls: D-pad Layout */
         .dpad-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 20px;
         }
+
         .dpad {
             display: grid;
             grid-template-areas: 
@@ -215,216 +267,466 @@
                 ". down .";
             gap: 12px;
         }
+
         .btn {
-            background: rgba(0,0,0,0.5);
-            color: var(--cyan);
-            border: 1px solid rgba(0,229,255,0.4);
-            padding: 15px 20px;
-            font-family: inherit;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px 22px;
+            font-family: var(--font-body);
+            font-size: 0.9em;
+            font-weight: 700;
             cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-            font-weight: bold;
-            letter-spacing: 1px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0,229,255,0.2), transparent);
-            transition: all 0.4s;
-        }
+
         .btn:hover {
-            box-shadow: var(--glow);
-            border-color: var(--cyan);
-            background: rgba(0, 229, 255, 0.1);
+            background: var(--text-main);
+            color: #ffffff;
+            border-color: var(--text-main);
+            transform: translateY(-2px);
         }
-        .btn:hover::before {
-            left: 100%;
-        }
+
         .btn:active {
-            background: var(--cyan);
-            color: #000;
-            box-shadow: var(--glow-strong);
-            transform: scale(0.95);
+            transform: scale(0.96);
         }
-        .voice-btn {
+
+        .btn-stop {
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .btn-stop:hover {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+        }
+
+        /* Slider Controls */
+        .slider-wrap {
+            display: flex;
+            align-items: center;
+            gap: 14px;
             width: 100%;
-            padding: 20px;
-            font-size: 1.5em;
-            margin-top: 20px;
-            border-width: 2px;
+            max-width: 320px;
+            font-size: 0.88em;
+            font-weight: 700;
         }
-        .voice-active {
-            animation: pulse-voice 1.5s infinite;
-        }
-        @keyframes pulse-voice {
-            0% { box-shadow: 0 0 5px var(--cyan), inset 0 0 5px var(--cyan); border-color: rgba(0,229,255,0.5); }
-            50% { box-shadow: 0 0 25px var(--cyan), inset 0 0 15px var(--cyan); border-color: var(--cyan); }
-            100% { box-shadow: 0 0 5px var(--cyan), inset 0 0 5px var(--cyan); border-color: rgba(0,229,255,0.5); }
-        }
-        
-        input[type="range"] {
-            width: 200px;
-            accent-color: var(--cyan);
+
+        .slider-wrap input[type="range"] {
+            flex: 1;
+            height: 5px;
+            border-radius: 5px;
+            background: var(--border);
+            outline: none;
             cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        /* Log window */
+        .log-window {
+            height: 230px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: rgba(30, 30, 25, 0.02);
+            padding: 14px 18px;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+        }
+
+        .log-row {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(30, 30, 25, 0.04);
+            display: flex;
+            gap: 12px;
+        }
+
+        .log-row:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            font-weight: 700;
+            color: var(--text-main);
+            opacity: 0.6;
+        }
+
+        /* NLP Input Panel */
+        .nlp-bar {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nlp-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            font-size: 0.95em;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .nlp-input:focus {
+            border-color: var(--accent);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(44, 37, 223, 0.08);
+        }
+
+        .btn-action {
+            background: var(--accent);
+            color: #ffffff;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 14px 28px;
+            font-family: var(--font-body);
+            font-weight: 700;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background: #1b17a1;
+            transform: translateY(-2px);
+        }
+
+        .nlp-data-table {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 6px;
+            font-size: 0.9em;
+        }
+
+        .nlp-data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nlp-data-row:last-child {
+            border: none;
+        }
+
+        .nlp-data-label {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .nlp-data-value {
+            font-weight: 700;
+        }
+
+        .progress-bar-container {
+            width: 120px;
+            height: 6px;
+            background: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            align-self: center;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.4s ease, background-color 0.4s ease;
+        }
+
+        /* Voice Panel */
+        .voice-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px 0;
+        }
+
+        .btn-voice {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 20px rgba(30, 30, 25, 0.03);
+        }
+
+        .btn-voice:hover {
+            transform: scale(1.06);
+            border-color: var(--accent);
+            box-shadow: 0 8px 30px rgba(44, 37, 223, 0.08);
+        }
+
+        .btn-voice.active {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 10px rgba(44, 37, 223, 0.15);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0px rgba(44, 37, 223, 0.2); }
+            70% { box-shadow: 0 0 0 12px rgba(44, 37, 223, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(44, 37, 223, 0); }
+        }
+
+        .voice-status-text {
+            font-weight: 700;
+            font-size: 0.95em;
+        }
+
+        .voice-helper {
+            font-size: 0.82em;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 260px;
+        }
+
+        @media (max-width: 768px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+            .full-width {
+                grid-column: span 1;
+            }
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            body {
+                padding: 20px 16px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="scanline-bar"></div>
     <div class="container">
-        <div class="header">
-            <div>VoxBot // BLE Command Dashboard</div>
+        <!-- Header -->
+        <div class="header animated-reveal">
             <div>
-                <span id="conn-status" style="color: var(--red);">[●] WS DISCONNECTED</span> |
-                <span id="ble-status" style="color: var(--amber);">[●] BLE OFFLINE</span> |
-                UPTIME: <span id="uptime">00:00:00</span> |
-                RECONNECTS: <span id="reconnects">0</span>
+                <h1>VoxBot</h1>
+                <p>Telemetry & Natural Language Interface</p>
             </div>
-        </div>
-
-        <div class="card-row">
-            <div class="card">
-                <div class="card-title">PITCH °</div>
-                <div class="card-value" id="val-pitch">0.00</div>
-            </div>
-            <div class="card">
-                <div class="card-title">VELOCITY m/s</div>
-                <div class="card-value" id="val-vel">0.00</div>
-            </div>
-            <div class="card">
-                <div class="card-title">HEIGHT mm</div>
-                <div class="card-value" id="val-height">150</div>
-            </div>
-            <div class="card">
-                <div class="card-title">LAST CMD</div>
-                <div class="card-value" style="color: var(--amber); font-size: 1.2em;" id="val-cmd">NONE</div>
-            </div>
-        </div>
-
-        <div class="charts-row">
-            <div class="chart-container">
-                <canvas id="pitchChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="velChart"></canvas>
-            </div>
-        </div>
-
-        <div class="encoders-row">
-            <div>L ENC: <span id="l-enc-val">000000</span></div>
-            <div style="border: 1px solid var(--border); margin: 5px 0;"><div class="encoder-bar" id="l-enc-bar"></div></div>
-            <div style="margin-top: 10px;">R ENC: <span id="r-enc-val">000000</span></div>
-            <div style="border: 1px solid var(--border); margin: 5px 0;"><div class="encoder-bar" id="r-enc-bar"></div></div>
-        </div>
-
-        <div class="log-nlp-row">
-            <div class="log-box" id="cmd-log">
-                <!-- Logs here -->
-            </div>
-            <div class="nlp-box">
-                <div class="card-title">NLP CONFIDENCE METER</div>
-                <div>Intent: <span id="nlp-intent">NONE</span></div>
-                <div>Confidence: <span id="nlp-conf">0.0%</span></div>
-                <div class="conf-bar-container">
-                    <div class="conf-bar" id="nlp-conf-bar" style="background: var(--red);"></div>
+            <div class="header-meta">
+                <div class="status-pill">
+                    <span class="status-indicator red" id="ws-indicator"></span>
+                    <span id="conn-text">Disconnected</span>
                 </div>
-                <br>
-                <div style="opacity: 0.7;">
-                    Raw text: "<span id="nlp-text"></span>"<br>
-                    Extracted vel: <span id="nlp-vel">1.0</span> m/s<br>
-                    Extracted height: <span id="nlp-h">150</span> mm
+                <div class="status-pill">
+                    Uptime: <span id="uptime">00:00:00</span>
                 </div>
             </div>
         </div>
 
-        <div class="dpad-container">
-            <div class="dpad">
-                <button class="btn" style="grid-area: up;" onclick="sendCommand('DRIVE_FORWARD', null)">▲ FWD</button>
-                <button class="btn" style="grid-area: left;" onclick="sendCommand('TURN_LEFT', null)">◄ LEFT</button>
-                <button class="btn" style="grid-area: stop;" onclick="sendCommand('STOP', null)">■ STOP</button>
-                <button class="btn" style="grid-area: right;" onclick="sendCommand('TURN_RIGHT', null)">RIGHT ►</button>
-                <button class="btn" style="grid-area: down;" onclick="sendCommand('DRIVE_BACKWARD', null)">▼ BACK</button>
-            </div>
-            <div>
-                SPEED: <input type="range" id="s-vel" min="0.10" max="1.00" step="0.05" value="0.50" onchange="updateSpeed(); sendSpeed()"> <span id="s-vel-val">0.50</span>
-            </div>
+        <!-- Bluetooth Status Banner -->
+        <div class="conn-banner disconnected animated-reveal delay-1" id="ble-banner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="ble-icon">
+                <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
+            </svg>
+            <span id="ble-status">Hardware disconnected. Continuously searching for robot server via Bluetooth…</span>
         </div>
 
-        <button class="btn voice-btn" id="voice-btn" onclick="toggleVoice()">🎤 VOICE: OFF</button>
-        <div style="text-align: center; opacity: 0.7; margin-top: 5px;" id="vad-indicator">● IDLE</div>
+        <!-- Layout Grid -->
+        <div class="layout-grid">
+            
+            <!-- Live Telemetry Panel -->
+            <div class="panel full-width animated-reveal delay-2">
+                <div class="panel-label">Live Telemetry</div>
+                
+                <div class="telemetry-row">
+                    <div class="telemetry-item">
+                        <span class="telemetry-num" id="val-pitch">—</span>
+                        <span class="telemetry-label">Pitch Angle</span>
+                    </div>
+                    <div class="telemetry-item">
+                        <span class="telemetry-num" id="val-pwm">—</span>
+                        <span class="telemetry-label">Motor Output</span>
+                    </div>
+                    <div class="telemetry-item">
+                        <span class="telemetry-num" id="val-cmd" style="font-size: 1.1em; color: var(--accent); margin-top: 14px;">NONE</span>
+                        <span class="telemetry-label">Command Intent</span>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <canvas id="pitchChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="pwmChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Directional Controller -->
+            <div class="panel animated-reveal delay-3">
+                <div class="panel-label">Directional Control</div>
+                <div class="dpad-container">
+                    <div class="dpad">
+                        <button class="btn" style="grid-area: up" onclick="sendCmd('DRIVE_FORWARD')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                            Forward
+                        </button>
+                        <button class="btn" style="grid-area: left" onclick="sendCmd('TURN_LEFT')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            Left
+                        </button>
+                        <button class="btn btn-stop" style="grid-area: stop" onclick="sendCmd('STOP')">
+                            Stop
+                        </button>
+                        <button class="btn" style="grid-area: right" onclick="sendCmd('TURN_RIGHT')">
+                            Right
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
+                        <button class="btn" style="grid-area: down" onclick="sendCmd('DRIVE_BACKWARD')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                            Backward
+                        </button>
+                    </div>
+                    
+                    <div class="slider-wrap">
+                        <span>Speed</span>
+                        <input type="range" id="s-vel" min="0.10" max="1.00" step="0.05" value="0.50"
+                            oninput="document.getElementById('s-vel-val').innerText=parseFloat(this.value).toFixed(2)"
+                            onchange="sendSpeed()">
+                        <span id="s-vel-val">0.50</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Command Log -->
+            <div class="panel animated-reveal delay-3">
+                <div class="panel-label">Command Log</div>
+                <div class="log-window" id="cmd-log"></div>
+            </div>
+
+            <!-- NLP Text Command -->
+            <div class="panel animated-reveal delay-4">
+                <div class="panel-label">NLP Text Interface</div>
+                <div class="nlp-bar">
+                    <input type="text" class="nlp-input" id="nlp-text-input" 
+                        placeholder="Type natural instructions (e.g., &quot;move forward slowly&quot;)"
+                        onkeydown="if(event.key==='Enter')sendNLPText()">
+                    <button class="btn-action" onclick="sendNLPText()">Send</button>
+                </div>
+                
+                <div class="nlp-data-table">
+                    <div class="nlp-data-row">
+                        <span class="nlp-data-label">Extracted Intent</span>
+                        <span class="nlp-data-value" id="nlp-intent">—</span>
+                    </div>
+                    <div class="nlp-data-row">
+                        <span class="nlp-data-label">Confidence Score</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span class="nlp-data-value" id="nlp-conf">0%</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="nlp-conf-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nlp-data-row">
+                        <span class="nlp-data-label">Target Speed</span>
+                        <span class="nlp-data-value"><span id="nlp-vel">0.50</span> m/s</span>
+                    </div>
+                    <div class="nlp-data-row" style="flex-direction: column; gap: 4px; align-items: flex-start;">
+                        <span class="nlp-data-label">Processed Instruction</span>
+                        <span id="nlp-text" style="font-style: italic; font-weight: 500; font-size: 0.95em; color: var(--text-muted);">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Controller -->
+            <div class="panel animated-reveal delay-4">
+                <div class="panel-label">Voice Control</div>
+                <div class="voice-box">
+                    <button class="btn-voice" id="voice-btn" onclick="toggleVoice()">
+                        🎤
+                    </button>
+                    <div class="voice-status-text" id="vad-indicator">Voice Control Offline</div>
+                    <div class="voice-helper">
+                        Click the mic icon to activate voice control. Whisper transcription pipeline handles ambient capture automatically.
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <script>
-        Chart.defaults.color = '#00e5ff';
-        Chart.defaults.font.family = "'Share Tech Mono', monospace";
-        
-        const pitchCtx = document.getElementById('pitchChart').getContext('2d');
-        const velCtx = document.getElementById('velChart').getContext('2d');
+        // Setup Chart defaults with clean styling
+        Chart.defaults.color = '#7a7a72';
+        Chart.defaults.font.family = "'DM Sans', sans-serif";
+        Chart.defaults.font.size = 11;
+        Chart.defaults.font.weight = 600;
 
-        const pitchChart = new Chart(pitchCtx, {
-            type: 'line',
-            data: {
-                labels: Array(60).fill(''),
-                datasets: [{
-                    label: 'PITCH HISTORY',
-                    data: Array(60).fill(0),
-                    borderColor: '#ff1744',
-                    backgroundColor: 'rgba(255,23,68,0.1)',
-                    fill: true,
-                    pointRadius: 0,
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                scales: {
-                    y: { min: -20, max: 20 },
-                    x: { display: false }
+        const createLiveChart = (canvasId, lineColor, minVal, maxVal) => {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: [{
+                        data: Array(60).fill(0),
+                        borderColor: lineColor,
+                        borderWidth: 2,
+                        backgroundColor: lineColor + '08',
+                        fill: true,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            min: minVal,
+                            max: maxVal,
+                            grid: { color: 'rgba(30, 30, 25, 0.04)' },
+                            border: { display: false }
+                        },
+                        x: { display: false }
+                    }
                 }
-            }
-        });
+            });
+        };
 
-        const velChart = new Chart(velCtx, {
-            type: 'line',
-            data: {
-                labels: Array(60).fill(''),
-                datasets: [{
-                    label: 'VELOCITY HISTORY',
-                    data: Array(60).fill(0),
-                    borderColor: '#00e5ff',
-                    backgroundColor: 'rgba(0,229,255,0.1)',
-                    fill: true,
-                    pointRadius: 0,
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                scales: {
-                    y: { min: -3.0, max: 3.0 },
-                    x: { display: false }
-                }
-            }
-        });
+        const pitchChart = createLiveChart('pitchChart', '#ef4444', -25, 25);
+        const pwmChart = createLiveChart('pwmChart', '#2c25df', -220, 220);
 
         let ws;
-        let reconnects = 0;
         let lastCmdStr = "";
 
         function connect() {
             ws = new WebSocket('ws://localhost:8765');
             
             ws.onopen = () => {
-                document.getElementById('conn-status').innerHTML = '[●] CONNECTED';
-                document.getElementById('conn-status').style.color = 'var(--green)';
+                document.getElementById('conn-text').innerText = 'Connected';
+                document.getElementById('ws-indicator').className = 'status-indicator green';
             };
 
             ws.onmessage = (event) => {
@@ -436,122 +738,121 @@
                 const s = Math.floor(d.uptime % 60).toString().padStart(2, '0');
                 document.getElementById('uptime').innerText = `${h}:${m}:${s}`;
 
-                // Update cards
-                const p = d.pitch;
-                const pEl = document.getElementById('val-pitch');
-                pEl.innerText = p.toFixed(2);
-                pEl.style.color = Math.abs(p) > 8 ? 'var(--red)' : 'var(--cyan)';
-                
-                document.getElementById('val-vel').innerText = d.velocity.toFixed(2);
-                document.getElementById('val-height').innerText = d.height.toFixed(0);
+                // BLE Connection Banner Status
+                const banner = document.getElementById('ble-banner');
+                const statusTxt = document.getElementById('ble-status');
+                if (d.ble_connected) {
+                    statusTxt.innerText = 'Bipedal Hardware Connected via BLE';
+                    banner.className = 'conn-banner connected';
+                } else {
+                    statusTxt.innerText = 'Hardware disconnected. Continuously searching for robot server via Bluetooth…';
+                    banner.className = 'conn-banner disconnected';
+                }
+
+                // Update Telemetry Cards
+                const pitchNum = document.getElementById('val-pitch');
+                const pwmNum = document.getElementById('val-pwm');
+                if (d.ble_connected) {
+                    pitchNum.innerText = d.pitch.toFixed(2) + '°';
+                    pitchNum.style.color = Math.abs(d.pitch) > 8 ? '#ef4444' : 'var(--text-main)';
+                    pwmNum.innerText = d.pwm.toFixed(0);
+                } else {
+                    pitchNum.innerText = '—';
+                    pitchNum.style.color = 'var(--text-muted)';
+                    pwmNum.innerText = '—';
+                }
                 document.getElementById('val-cmd').innerText = d.last_cmd;
 
                 // Charts
-                pitchChart.data.datasets[0].data.push(p);
+                pitchChart.data.datasets[0].data.push(d.pitch);
                 if (pitchChart.data.datasets[0].data.length > 60) pitchChart.data.datasets[0].data.shift();
                 pitchChart.update('none');
 
-                velChart.data.datasets[0].data.push(d.velocity);
-                if (velChart.data.datasets[0].data.length > 60) velChart.data.datasets[0].data.shift();
-                velChart.update('none');
+                pwmChart.data.datasets[0].data.push(d.pwm);
+                if (pwmChart.data.datasets[0].data.length > 60) pwmChart.data.datasets[0].data.shift();
+                pwmChart.update('none');
 
-                // Encoders
-                const lEnc = d.enc_left;
-                const rEnc = d.enc_right;
-                document.getElementById('l-enc-val').innerText = lEnc.toString().padStart(6, '0');
-                document.getElementById('r-enc-val').innerText = rEnc.toString().padStart(6, '0');
-                
-                document.getElementById('l-enc-bar').style.width = `${(Math.abs(lEnc) % 1000) / 10}%`;
-                document.getElementById('r-enc-bar').style.width = `${(Math.abs(rEnc) % 1000) / 10}%`;
-
-                // Log
+                // Update Command Logs
                 if (d.last_cmd !== lastCmdStr) {
                     lastCmdStr = d.last_cmd;
-                    const logEl = document.getElementById('cmd-log');
-                    const timeStr = new Date().toISOString().substring(11, 23);
-                    const color = d.last_confidence < 0.7 && !d.last_cmd.startsWith("MANUAL") ? 'var(--amber)' : 'var(--cyan)';
+                    const logBox = document.getElementById('cmd-log');
+                    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     
                     const entry = document.createElement('div');
-                    entry.className = 'log-entry';
-                    entry.style.color = color;
-                    entry.innerText = `[${timeStr}] ${d.last_intent} (${(d.last_confidence*100).toFixed(1)}%) → ${d.last_raw_text || 'UI'}`;
-                    logEl.insertBefore(entry, logEl.firstChild);
+                    entry.className = 'log-row';
+                    if (d.last_confidence < 0.7 && !d.last_cmd.startsWith("MANUAL")) {
+                        entry.style.color = 'var(--active-orange)';
+                    } else {
+                        entry.style.color = 'var(--text-main)';
+                    }
                     
-                    if (logEl.children.length > 50) {
-                        logEl.removeChild(logEl.lastChild);
+                    entry.innerHTML = `<span class="log-time">${timeStr}</span> <span>${d.last_intent} (${(d.last_confidence * 100).toFixed(0)}%) — ${d.last_raw_text || 'UI Command'}</span>`;
+                    logBox.insertBefore(entry, logBox.firstChild);
+                    
+                    if (logBox.children.length > 50) {
+                        logBox.removeChild(logBox.lastChild);
                     }
                 }
 
-                // NLP
+                // Update NLP details
                 document.getElementById('nlp-intent').innerText = d.last_intent;
-                const confPct = (d.last_confidence * 100).toFixed(1);
+                const confPct = (d.last_confidence * 100).toFixed(0);
                 document.getElementById('nlp-conf').innerText = `${confPct}%`;
                 
                 const bar = document.getElementById('nlp-conf-bar');
                 bar.style.width = `${confPct}%`;
-                if (confPct < 50) bar.style.background = 'var(--red)';
-                else if (confPct < 75) bar.style.background = 'var(--amber)';
-                else if (confPct < 95) bar.style.background = 'var(--cyan)';
-                else bar.style.background = 'var(--green)';
+                if (confPct < 50) bar.style.backgroundColor = '#ef4444';
+                else if (confPct < 75) bar.style.backgroundColor = 'var(--active-orange)';
+                else bar.style.backgroundColor = 'var(--active-green)';
 
-                document.getElementById('nlp-text').innerText = d.last_raw_text;
-                document.getElementById('nlp-vel').innerText = d.last_vel_extracted.toFixed(1);
-                document.getElementById('nlp-h').innerText = d.last_height_extracted.toFixed(0);
+                document.getElementById('nlp-text').innerText = d.last_raw_text ? `"${d.last_raw_text}"` : '—';
+                document.getElementById('nlp-vel').innerText = d.last_vel_extracted.toFixed(2);
 
-                const bleStatus = document.getElementById('ble-status');
-                if (d.ble_connected) {
-                    bleStatus.innerText = '[●] BLE CONNECTED';
-                    bleStatus.style.color = 'var(--green)';
-                } else {
-                    bleStatus.innerText = '[●] BLE DISCONNECTED';
-                    bleStatus.style.color = 'var(--amber)';
-                }
-
-                // Voice btn
-                const btn = document.getElementById('voice-btn');
+                // Voice Toggle details
+                const voiceBtn = document.getElementById('voice-btn');
+                const voiceIndicator = document.getElementById('vad-indicator');
                 if (d.voice_active) {
-                    btn.innerText = '🎤 VOICE: ACTIVE';
-                    btn.classList.add('voice-active');
-                    btn.style.color = 'black';
-                    btn.style.background = 'var(--cyan)';
+                    voiceBtn.className = 'btn-voice active';
+                    voiceIndicator.innerText = 'Voice Control Active';
+                    voiceIndicator.style.color = 'var(--accent)';
                 } else {
-                    btn.innerText = '🎤 VOICE: OFF';
-                    btn.classList.remove('voice-active');
-                    btn.style.color = 'var(--cyan)';
-                    btn.style.background = 'black';
+                    voiceBtn.className = 'btn-voice';
+                    voiceIndicator.innerText = 'Voice Control Offline';
+                    voiceIndicator.style.color = 'var(--text-muted)';
                 }
             };
 
             ws.onclose = () => {
-                document.getElementById('conn-status').innerHTML = '[●] DISCONNECTED';
-                document.getElementById('conn-status').style.color = 'var(--red)';
-                reconnects++;
-                document.getElementById('reconnects').innerText = reconnects;
+                document.getElementById('conn-text').innerText = 'Disconnected';
+                document.getElementById('ws-indicator').className = 'status-indicator red';
                 setTimeout(connect, 2000);
             };
         }
 
-        function sendCommand(cmd, val) {
+        function sendCmd(cmd) {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                const payload = { cmd };
-                if (val !== null) {
-                    payload.val = parseFloat(val);
-                }
-                ws.send(JSON.stringify(payload));
+                ws.send(JSON.stringify({ cmd }));
             }
         }
 
         function sendSpeed() {
-            const speed = document.getElementById('s-vel').value;
-            sendCommand('SPEED', speed);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const speed = document.getElementById('s-vel').value;
+                ws.send(JSON.stringify({ cmd: 'SPEED', val: parseFloat(speed) }));
+            }
         }
 
         function toggleVoice() {
-            sendCommand('VOICE_TOGGLE', null);
+            sendCmd('VOICE_TOGGLE');
         }
 
-        function updateSpeed() {
-            document.getElementById('s-vel-val').innerText = parseFloat(document.getElementById('s-vel').value).toFixed(2);
+        function sendNLPText() {
+            const input = document.getElementById('nlp-text-input');
+            const text = input.value.trim();
+            if (text && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ cmd: 'NLP_TEXT', text }));
+                input.value = '';
+            }
         }
 
         connect();
