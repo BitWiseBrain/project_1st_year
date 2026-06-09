@@ -1,9 +1,17 @@
 import numpy as np
-import sounddevice as sd
+
+try:
+    import sounddevice as sd
+    _sd_error = None
+except Exception as exc:
+    sd = None
+    _sd_error = exc
 
 class VADAudioRecorder:
     def __init__(self, sample_rate=16000, chunk_ms=30,
                  energy_threshold=0.005, silence_duration_ms=800):
+        if sd is None:
+            raise RuntimeError(f"sounddevice unavailable: {_sd_error}")
         self.sample_rate = sample_rate
         self.chunk_size = sample_rate * chunk_ms // 1000
         self.energy_threshold = energy_threshold

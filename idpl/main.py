@@ -6,12 +6,26 @@ import webbrowser
 from dataclasses import dataclass, field
 
 from nlp.pipeline import NLPPipeline
-from stt.recorder import VADAudioRecorder
-from stt.transcriber import WhisperTranscriber
 from ble.client import BLEClient
 from telemetry.mock import MockTelemetry
 from server.ws_server import WebSocketServer
 from server.http_server import HTTPServer
+
+try:
+    from stt.recorder import VADAudioRecorder
+    from stt.transcriber import WhisperTranscriber
+    stt_available = True
+except Exception as exc:
+    print(f"[STT] Warning: voice features disabled: {exc}")
+    stt_available = False
+
+    class VADAudioRecorder:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("VADAudioRecorder is unavailable")
+
+    class WhisperTranscriber:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("WhisperTranscriber is unavailable")
 
 @dataclass
 class SharedState:
@@ -92,17 +106,25 @@ def main():
     t_mock = threading.Thread(target=mock_telemetry_thread_func, args=(state,), daemon=True)
     t_mock.start()
 
-    print("[STT]  Loading Whisper tiny.en model...")
-    recorder = VADAudioRecorder()
-    transcriber = WhisperTranscriber()
-    print("[STT]  Whisper ready.")
+    if stt_available:
+        print("[STT]  Loading Whisper tiny.en model...")
+        recorder = VADAudioRecorder()
+        transcriber = WhisperTranscriber()
+        print("[STT]  Whisper ready.")
+    else:
+        recorder = None
+        transcriber = None
+        print("[STT]  Voice features are disabled. Continuing without speech input.")
 
     print("[WS]   WebSocket server starting on ws://localhost:8765")
     t_ws = threading.Thread(target=ws_thread_func, args=(state, ble_client), daemon=True)
     t_ws.start()
 
-    t_voice = threading.Thread(target=voice_thread_func, args=(state, pipeline, recorder, transcriber, ble_client), daemon=True)
-    t_voice.start()
+    if stt_available:
+        t_voice = threading.Thread(target=voice_thread_func, args=(state, pipeline, recorder, transcriber, ble_client), daemon=True)
+        t_voice.start()
+    else:
+        print("[STT] Voice thread disabled.")
     
     t_uptime = threading.Thread(target=uptime_updater, args=(state,), daemon=True)
     t_uptime.start()

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIPED_BOT // CONTROL TERMINAL</title>
+    <title>VoxBot // BLE Control Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <style>
@@ -277,10 +277,11 @@
     <div class="scanline-bar"></div>
     <div class="container">
         <div class="header">
-            <div>BIPED_BOT // CONTROL TERMINAL v1.0</div>
+            <div>VoxBot // BLE Command Dashboard</div>
             <div>
-                <span id="conn-status" style="color: var(--red);">[●] DISCONNECTED</span> | 
-                UPTIME: <span id="uptime">00:00:00</span> | 
+                <span id="conn-status" style="color: var(--red);">[●] WS DISCONNECTED</span> |
+                <span id="ble-status" style="color: var(--amber);">[●] BLE OFFLINE</span> |
+                UPTIME: <span id="uptime">00:00:00</span> |
                 RECONNECTS: <span id="reconnects">0</span>
             </div>
         </div>
@@ -342,17 +343,14 @@
 
         <div class="dpad-container">
             <div class="dpad">
-                <button class="btn" style="grid-area: up;" onclick="sendCommand('FORWARD', document.getElementById('s-vel').value, null)">▲ FWD</button>
-                <button class="btn" style="grid-area: left;" onclick="sendCommand('TURN_LEFT', document.getElementById('s-vel').value, null)">◄ LEFT</button>
-                <button class="btn" style="grid-area: stop;" onclick="sendCommand('STOP', 0, null)">■ STOP</button>
-                <button class="btn" style="grid-area: right;" onclick="sendCommand('TURN_RIGHT', document.getElementById('s-vel').value, null)">RIGHT ►</button>
-                <button class="btn" style="grid-area: down;" onclick="sendCommand('BACKWARD', document.getElementById('s-vel').value, null)">▼ BACK</button>
+                <button class="btn" style="grid-area: up;" onclick="sendCommand('DRIVE_FORWARD', null)">▲ FWD</button>
+                <button class="btn" style="grid-area: left;" onclick="sendCommand('TURN_LEFT', null)">◄ LEFT</button>
+                <button class="btn" style="grid-area: stop;" onclick="sendCommand('STOP', null)">■ STOP</button>
+                <button class="btn" style="grid-area: right;" onclick="sendCommand('TURN_RIGHT', null)">RIGHT ►</button>
+                <button class="btn" style="grid-area: down;" onclick="sendCommand('DRIVE_BACKWARD', null)">▼ BACK</button>
             </div>
             <div>
-                SPEED: <input type="range" id="s-vel" min="0.1" max="3.0" step="0.1" value="1.0" onchange="updateSliders()"> <span id="s-vel-val">1.0 m/s</span>
-            </div>
-            <div>
-                HEIGHT: <input type="range" id="s-height" min="80" max="190" step="5" value="150" onchange="sendCommand('SET_HEIGHT', null, this.value); updateSliders()"> <span id="s-height-val">150 mm</span>
+                SPEED: <input type="range" id="s-vel" min="0.10" max="1.00" step="0.05" value="0.50" onchange="updateSpeed(); sendSpeed()"> <span id="s-vel-val">0.50</span>
             </div>
         </div>
 
@@ -500,6 +498,15 @@
                 document.getElementById('nlp-vel').innerText = d.last_vel_extracted.toFixed(1);
                 document.getElementById('nlp-h').innerText = d.last_height_extracted.toFixed(0);
 
+                const bleStatus = document.getElementById('ble-status');
+                if (d.ble_connected) {
+                    bleStatus.innerText = '[●] BLE CONNECTED';
+                    bleStatus.style.color = 'var(--green)';
+                } else {
+                    bleStatus.innerText = '[●] BLE DISCONNECTED';
+                    bleStatus.style.color = 'var(--amber)';
+                }
+
                 // Voice btn
                 const btn = document.getElementById('voice-btn');
                 if (d.voice_active) {
@@ -524,22 +531,27 @@
             };
         }
 
-        function sendCommand(cmd, val, height) {
+        function sendCommand(cmd, val) {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                const payload = {cmd};
-                if (val !== null) payload.val = parseFloat(val);
-                if (height !== null) payload.height = parseFloat(height);
+                const payload = { cmd };
+                if (val !== null) {
+                    payload.val = parseFloat(val);
+                }
                 ws.send(JSON.stringify(payload));
             }
         }
 
-        function toggleVoice() {
-            sendCommand('VOICE_TOGGLE', null, null);
+        function sendSpeed() {
+            const speed = document.getElementById('s-vel').value;
+            sendCommand('SPEED', speed);
         }
 
-        function updateSliders() {
-            document.getElementById('s-vel-val').innerText = document.getElementById('s-vel').value + ' m/s';
-            document.getElementById('s-height-val').innerText = document.getElementById('s-height').value + ' mm';
+        function toggleVoice() {
+            sendCommand('VOICE_TOGGLE', null);
+        }
+
+        function updateSpeed() {
+            document.getElementById('s-vel-val').innerText = parseFloat(document.getElementById('s-vel').value).toFixed(2);
         }
 
         connect();

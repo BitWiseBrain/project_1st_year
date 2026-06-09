@@ -52,8 +52,10 @@ class WebSocketServer:
                                 self.state.last_vel_extracted = float(data["val"])
                             if "height" in data:
                                 self.state.last_height_extracted = float(data["height"])
-                        
-                        await self.ble_client.send_command(message)
+                        try:
+                            await self.ble_client.send_command(message)
+                        except Exception as exc:
+                            print(f"[WS] BLE send failed: {exc}")
         except websockets.exceptions.ConnectionClosed:
             pass
         except json.JSONDecodeError:
